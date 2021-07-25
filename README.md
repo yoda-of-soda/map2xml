@@ -32,15 +32,15 @@ When the configuration has been set up, you can print the configuration with the
 
 You can split it up into configuration and execution like this:
 ```golang
-config := map2xml.New(inputMap, "person")
+config := map2xml.New(inputMap)
 config.WithIndent("", "  ")
-config.WithRootAttributes(map[string]string{"mood": "happy"})
+config.WithRoot("person", map[string]string{"mood": "happy"})
 xmlBytes, err := config.Marshal()
 ```
 
 All these functions can be put together in a single line like this:
 ```golang
-xmlString, err := map2xml.New(inputMap, "person").AsCData().WithIndent("", "  ").WithRootAttributes(map[string]string{"mood": "happy"}).MarshalToString()
+xmlString, err := map2xml.New(inputMap).AsCData().WithIndent("", "  ").WithRoot("person", map[string]string{"mood": "happy"}).MarshalToString()
 ```
 
 You can even put the ```Print()``` function in the loop, e.g.
