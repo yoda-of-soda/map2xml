@@ -1,7 +1,5 @@
 package map2xml
 
-// package main
-
 import (
 	"encoding/xml"
 	"fmt"
