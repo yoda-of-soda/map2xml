@@ -1,6 +1,7 @@
 package map2xml
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"reflect"
@@ -11,12 +12,16 @@ type Indentation struct {
 	Indent string
 }
 
+type Root struct {
+	Name          *xml.Name
+	XMLAttributes *[]xml.Attr
+	Attributes    map[string]string
+}
 type StructMap struct {
-	CData           bool
-	XMLName         *xml.Name
-	Map             map[string]interface{}
-	Indent          *Indentation
-	StartAttributes *[]xml.Attr
+	CData  bool
+	Map    map[string]interface{}
+	Indent *Indentation
+	Root   *Root
 }
 
 type xmlMapEntry struct {
@@ -25,60 +30,49 @@ type xmlMapEntry struct {
 	CDataValue interface{} `xml:",cdata"`
 }
 
-// func main() {
-// 	ori := map[string]interface{}{
-// 		"a": 1,
-// 		"b": "abekat",
-// 		"tivoli": map[string]interface{}{
-// 			"int":  42,
-// 			"crap": false,
-// 		},
-// 	}
-// 	awesome := New(ori, "goodfellas").AsCData().WithIndent("", "  ").WithStartAttributes(map[string]string{"status": "awesome"})
-// 	str, err := awesome.MarshalToString()
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	fmt.Println(str)
-// }
-
-func New(input map[string]interface{}, xmlName string) *StructMap {
-	return &StructMap{Map: input, XMLName: &xml.Name{Local: xmlName}}
+//Initializes the builder. Required to do anything with this library
+func New(input map[string]interface{}) *StructMap {
+	return &StructMap{Map: input}
 }
 
+//Add indentation to your xml
 func (smap *StructMap) WithIndent(prefix string, indent string) *StructMap {
 	smap.Indent = &Indentation{Prefix: prefix, Indent: indent}
 	return smap
 }
 
-func (smap *StructMap) WithStartAttributes(xmlStartAttributes map[string]string) *StructMap {
+//Add a root node to your xml
+func (smap *StructMap) WithRoot(name string, attributes map[string]string) *StructMap {
 	attr := []xml.Attr{}
-	for k, v := range xmlStartAttributes {
+	for k, v := range attributes {
 		attr = append(attr, xml.Attr{Name: xml.Name{Local: k}, Value: v})
 	}
-	smap.StartAttributes = &attr
+	smap.Root = &Root{Name: &xml.Name{Local: name}, XMLAttributes: &attr, Attributes: attributes}
 	return smap
 }
 
+//Add CDATA tags to all nodes
 func (smap *StructMap) AsCData() *StructMap {
 	smap.CData = true
 	return smap
 }
 
-func (smap *StructMap) Print() {
+//Prints your configuration in json format
+func (smap *StructMap) Print() *StructMap {
 	var indent interface{} = smap.Indent
-	var attr interface{} = smap.StartAttributes
+	var root interface{}
 	if smap.Indent != nil {
 		indent = map[string]int{"indent_spaces": len(*&smap.Indent.Indent), "prefix_spaces": len(*&smap.Indent.Prefix)}
 	}
-	var rootName interface{} = smap.XMLName
-	if rootName == nil {
-		rootName = "none"
+	if root = smap.Root; root != nil {
+		root = map[string]interface{}{"name": *&smap.Root.Name.Local, "attributes": smap.Root.Attributes}
 	}
-	fmt.Printf("XML root name: %v\nCDATA: %v\nIndentation: %v\nStart Attributes: %v\n",
-		rootName, smap.CData, indent, attr)
+	b, _ := json.MarshalIndent(map[string]interface{}{"root": root, "cdata": smap.CData, "indent": indent}, " ", "  ")
+	fmt.Println(string(b))
+	return smap
 }
 
+//Builds XML as bytes
 func (smap *StructMap) Marshal() ([]byte, error) {
 	if smap.Indent == nil {
 		return xml.Marshal(smap)
@@ -87,6 +81,7 @@ func (smap *StructMap) Marshal() ([]byte, error) {
 	}
 }
 
+//Builds XML as string
 func (smap *StructMap) MarshalToString() (string, error) {
 	xmlBytes, err := smap.Marshal()
 	return string(xmlBytes), err
@@ -96,16 +91,11 @@ func (smap StructMap) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	if len(smap.Map) == 0 {
 		return nil
 	}
-	if smap.XMLName != nil {
-		start = xml.StartElement{Name: *smap.XMLName, Attr: start.Attr}
-	}
-
-	if smap.StartAttributes != nil {
-		start.Attr = *smap.StartAttributes
-	}
-
-	if err := e.EncodeToken(start); err != nil {
-		return err
+	if smap.Root != nil {
+		start = xml.StartElement{Name: *smap.Root.Name, Attr: *smap.Root.XMLAttributes}
+		if err := e.EncodeToken(start); err != nil {
+			return err
+		}
 	}
 
 	for k, v := range smap.Map {
@@ -113,7 +103,11 @@ func (smap StructMap) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 			return err
 		}
 	}
-	return e.EncodeToken(start.End())
+
+	if smap.Root != nil {
+		return e.EncodeToken(start.End())
+	}
+	return nil
 }
 
 func handleChildren(e *xml.Encoder, fieldName string, v interface{}, cdata bool) error {

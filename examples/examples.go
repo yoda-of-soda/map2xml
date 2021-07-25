@@ -7,16 +7,29 @@ import (
 )
 
 func main() {
-	ori := map[string]interface{}{
-		"a": 1,
-		"b": "abekat",
-		"tivoli": map[string]interface{}{
-			"int":  42,
-			"crap": false,
+	inputMap := map[string]interface{}{
+		"first_name": "No",
+		"last_name":  "Name",
+		"age":        42,
+		"got_a_job":  true,
+		"address": map[string]interface{}{
+			"street":   "124 Oxford Street",
+			"city":     "Somewhere",
+			"zip_code": 32784,
+			"state":    "Deep state",
 		},
 	}
-	awesome := map2xml.New(ori, "goodfellas").AsCData().WithIndent("", "  ").WithStartAttributes(map[string]string{"status": "awesome"})
-	str, err := awesome.MarshalToString()
+
+	config := map2xml.New(inputMap)
+	config.WithIndent("", "  ")
+	config.AsCData()
+	config.WithRoot("person", map[string]string{"mood": "happy"})
+	config.Print()
+
+	xmlBytes, err := config.Marshal()
+	fmt.Println(string(xmlBytes))
+
+	str, err := map2xml.New(inputMap).AsCData().WithIndent("", "  ").WithRoot("person", map[string]string{"mood": "happy"}).Print().MarshalToString()
 	if err != nil {
 		panic(err)
 	}
