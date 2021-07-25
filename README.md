@@ -3,6 +3,10 @@ Golang map2xml is a wrapper around encoding/xml to enable it to marshal interfac
 
 It is based upon a builder pattern to enable developers to execute simple instructions without having to consider features they don't want to use.
 
+## Installation
+```
+go get github.com/JohnAllanNielsen/map2xml
+```
 ## How to use it
 You start with the ```map2xml.New()``` function and insert a ```map[string]interface{}```, e.g. 
 
