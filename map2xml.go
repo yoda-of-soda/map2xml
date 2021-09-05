@@ -119,6 +119,16 @@ func handleChildren(e *xml.Encoder, fieldName string, v interface{}, cdata bool)
 			handleChildren(e, key, val, cdata)
 		}
 		return e.EncodeToken(xml.EndElement{Name: xml.Name{Local: fieldName}})
+	} else if reflect.TypeOf(v).Kind() == reflect.Slice {
+		e.EncodeToken(xml.StartElement{Name: xml.Name{Local: fieldName}})
+		childName := fieldName + "_child"
+		if _, hasChildName := v.([]map[string]interface{})[0]["xml_child_name"]; hasChildName {
+			childName = v.([]map[string]interface{})[0]["xml_child_name"].(string)
+		}
+		for _, elem := range v.([]map[string]interface{}) {
+			handleChildren(e, childName, elem, cdata)
+		}
+		return e.EncodeToken(xml.EndElement{Name: xml.Name{Local: fieldName}})
 	}
 	if cdata {
 		return e.Encode(xmlMapEntry{XMLName: xml.Name{Local: fieldName}, CDataValue: v})
