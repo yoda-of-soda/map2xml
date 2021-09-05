@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/JohnAllanNielsen/map2xml"
+	"github.com/yoda-of-soda/map2xml"
 )
 
 func main() {
@@ -12,6 +12,7 @@ func main() {
 		"last_name":  "Name",
 		"age":        42,
 		"got_a_job":  true,
+		"secret":     nil,
 		"address": map[string]interface{}{
 			"street":   "124 Oxford Street",
 			"city":     "Somewhere",

@@ -1,3 +1,3 @@
-module github.com/JohnAllanNielsen/map2xml
+module github.com/yoda-of-soda/map2xml
 
 go 1.16

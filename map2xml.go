@@ -111,7 +111,9 @@ func (smap StructMap) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 }
 
 func handleChildren(e *xml.Encoder, fieldName string, v interface{}, cdata bool) error {
-	if reflect.TypeOf(v).Kind() == reflect.Map {
+	if reflect.TypeOf(v) == nil {
+		return e.Encode(xmlMapEntry{XMLName: xml.Name{Local: fieldName}, Value: ""})
+	} else if reflect.TypeOf(v).Kind() == reflect.Map {
 		e.EncodeToken(xml.StartElement{Name: xml.Name{Local: fieldName}})
 		for key, val := range v.(map[string]interface{}) {
 			handleChildren(e, key, val, cdata)
