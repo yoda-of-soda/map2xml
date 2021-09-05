@@ -5,7 +5,7 @@ It is based upon a builder pattern to enable developers to execute simple instru
 
 ## Installation
 ```
-go get github.com/JohnAllanNielsen/map2xml
+go get github.com/yoda-of-soda/map2xml
 ```
 ## How to use it
 You start with the ```map2xml.New()``` function and insert a ```map[string]interface{}```, e.g. 
