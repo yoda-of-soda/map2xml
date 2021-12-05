@@ -116,6 +116,9 @@ func handleChildren(e *xml.Encoder, fieldName string, v interface{}, cdata bool)
 	} else if reflect.TypeOf(v).Kind() == reflect.Map {
 		e.EncodeToken(xml.StartElement{Name: xml.Name{Local: fieldName}})
 		for key, val := range v.(map[string]interface{}) {
+			if key == "xml_child_name" {
+				continue
+			}
 			handleChildren(e, key, val, cdata)
 		}
 		return e.EncodeToken(xml.EndElement{Name: xml.Name{Local: fieldName}})
