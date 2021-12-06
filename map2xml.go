@@ -18,10 +18,11 @@ type Root struct {
 	Attributes    map[string]string
 }
 type StructMap struct {
-	CData  bool
-	Map    map[string]interface{}
-	Indent *Indentation
-	Root   *Root
+	CData     bool
+	CSortKeys bool
+	Map       map[string]interface{}
+	Indent    *Indentation
+	Root      *Root
 }
 
 type xmlMapEntry struct {
@@ -54,6 +55,12 @@ func (smap *StructMap) WithRoot(name string, attributes map[string]string) *Stru
 //Add CDATA tags to all nodes
 func (smap *StructMap) AsCData() *StructMap {
 	smap.CData = true
+	return smap
+}
+
+//Sort by keys
+func (smap *StructMap) WithSortedKeys() *StructMap {
+	smap.CSortKeys = true
 	return smap
 }
 
