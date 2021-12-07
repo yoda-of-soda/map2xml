@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"reflect"
+	"sort"
 )
 
 type Indentation struct {
@@ -18,10 +19,11 @@ type Root struct {
 	Attributes    map[string]string
 }
 type StructMap struct {
-	CData  bool
-	Map    map[string]interface{}
-	Indent *Indentation
-	Root   *Root
+	CData     bool
+	CSortKeys bool
+	Map       map[string]interface{}
+	Indent    *Indentation
+	Root      *Root
 }
 
 type xmlMapEntry struct {
@@ -54,6 +56,12 @@ func (smap *StructMap) WithRoot(name string, attributes map[string]string) *Stru
 //Add CDATA tags to all nodes
 func (smap *StructMap) AsCData() *StructMap {
 	smap.CData = true
+	return smap
+}
+
+//Sort by keys
+func (smap *StructMap) WithSortedKeys() *StructMap {
+	smap.CSortKeys = true
 	return smap
 }
 
@@ -98,9 +106,33 @@ func (smap StructMap) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 		}
 	}
 
-	for k, v := range smap.Map {
-		if err := handleChildren(e, k, v, smap.CData); err != nil {
-			return err
+	values := smap.Map
+
+	if smap.CSortKeys {
+		keys := make([]string, 0, len(values))
+		for k := range values {
+			keys = append(keys, k)
+		}
+		// sort by keys
+		sort.Strings(keys)
+
+		for _, key := range keys {
+			val := values[key]
+			if key == "xml_child_name" {
+				continue
+			}
+			if err := handleChildren(e, key, val, smap.CData, smap.CSortKeys); err != nil {
+				return err
+			}
+		}
+	} else {
+		for key, val := range values {
+			if key == "xml_child_name" {
+				continue
+			}
+			if err := handleChildren(e, key, val, smap.CData, smap.CSortKeys); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -110,17 +142,37 @@ func (smap StructMap) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	return nil
 }
 
-func handleChildren(e *xml.Encoder, fieldName string, v interface{}, cdata bool) error {
+func handleChildren(e *xml.Encoder, fieldName string, v interface{}, cdata, csort bool) error {
 	if reflect.TypeOf(v) == nil {
 		return e.Encode(xmlMapEntry{XMLName: xml.Name{Local: fieldName}, Value: ""})
 	} else if reflect.TypeOf(v).Kind() == reflect.Map {
 		e.EncodeToken(xml.StartElement{Name: xml.Name{Local: fieldName}})
-		for key, val := range v.(map[string]interface{}) {
-			if key == "xml_child_name" {
-				continue
+		values := v.(map[string]interface{})
+
+		if csort {
+			// sort by keys
+			keys := make([]string, 0, len(values))
+			for k := range values {
+				keys = append(keys, k)
 			}
-			handleChildren(e, key, val, cdata)
+			sort.Strings(keys)
+
+			for _, key := range keys {
+				val := values[key]
+				if key == "xml_child_name" {
+					continue
+				}
+				handleChildren(e, key, val, cdata, csort)
+			}
+		} else {
+			for key, val := range values {
+				if key == "xml_child_name" {
+					continue
+				}
+				handleChildren(e, key, val, cdata, csort)
+			}
 		}
+
 		return e.EncodeToken(xml.EndElement{Name: xml.Name{Local: fieldName}})
 	} else if reflect.TypeOf(v).Kind() == reflect.Slice {
 		e.EncodeToken(xml.StartElement{Name: xml.Name{Local: fieldName}})
@@ -129,7 +181,7 @@ func handleChildren(e *xml.Encoder, fieldName string, v interface{}, cdata bool)
 			childName = v.([]map[string]interface{})[0]["xml_child_name"].(string)
 		}
 		for _, elem := range v.([]map[string]interface{}) {
-			handleChildren(e, childName, elem, cdata)
+			handleChildren(e, childName, elem, cdata, csort)
 		}
 		return e.EncodeToken(xml.EndElement{Name: xml.Name{Local: fieldName}})
 	}
